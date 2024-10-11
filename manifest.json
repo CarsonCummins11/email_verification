@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "Email OTP",
+    "version": "1.0",
+    "description": "This extension auto enters otp from your email",
+    "permissions": [
+        "tabs",
+        "scripting"
+    ],
+    "host_permissions": [
+      "https://mail.google.com/*"
+    ],
+    "background": {
+      "service_worker": "scripts/gmail_service_worker.js"
+    },
+    "content_scripts": [
+      {
+        "js": ["scripts/any_page_content.js"],
+        "matches": [
+          "*://*/*"
+        ],
+        "exclude_matches": [
+          "*://mail.google.com/*"
+        ]
+      }
+    ]
+  }
