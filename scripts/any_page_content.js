@@ -1,4 +1,9 @@
 function create_autofill_popup(input_to_populate, otp){
+
+    if (document.getElementById("otp_popup_uuid_abc_256")){
+        document.getElementById("otp_popup_uuid_abc_256").innerHTML = otp;
+        return;
+    }
     //create a popup to autofill the OTP
     var popup = document.createElement("button");
     popup.style.position = "fixed";
@@ -10,6 +15,7 @@ function create_autofill_popup(input_to_populate, otp){
     popup.style.zIndex = "1000";
     popup.style.display = "block";
     popup.style.cursor = "pointer";
+    popup.id = "otp_popup_uuid_abc_256";
 
     popup.onclick = function(){
         input_to_populate.value = otp;
