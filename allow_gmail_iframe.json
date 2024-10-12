@@ -1,0 +1,14 @@
+[{
+    "id": "allow_gmail_iframe",
+    "priority": 1,
+    "condition": {
+        "resourceTypes": ["sub_frame"]
+    },
+    "action": {
+        "type": "modifyHeaders",
+        "responseHeaders": [
+            {"header": "X-Frame-Options", "operation": "remove"},
+            {"header": "Frame-Options", "operation": "remove"}
+        ]
+    }
+}]

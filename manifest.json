@@ -3,9 +3,13 @@
     "name": "Email OTP",
     "version": "1.0",
     "description": "This extension auto enters otp from your email",
+    "minimum_chrome_version": "101",
     "permissions": [
         "tabs",
-        "scripting"
+        "scripting",
+        "offscreen",
+        "declarativeNetRequestWithHostAccess",
+        "browsingData"
     ],
     "host_permissions": [
       "https://mail.google.com/*"
@@ -23,5 +27,12 @@
           "*://mail.google.com/*"
         ]
       }
-    ]
+    ],
+    "declarative_net_request" : {
+        "rule_resources" : [{
+            "id": "allow_gmail_iframe",
+            "enabled": true,
+            "path": "allow_gmail_iframe.json"
+        }]
+    }
   }

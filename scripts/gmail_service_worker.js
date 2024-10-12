@@ -1,44 +1,85 @@
-function retrieve_otp_from_gmail_dom(){
-    const xpathResult = document.evaluate("/html/body/div[6]/div[3]/div/div[2]/div[2]/div/div/div/div[2]/div/div[1]/div/div/div[8]/div/div[1]/div[2]/div/table/tbody/tr[1]/td[5]/div[1]/div/span", document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null); 
-    console.log(xpathResult);
-    possible_otp = xpathResult.iterateNext().innerHTML;
-
-    if (possible_otp) {
-        console.log(possible_otp);
-        otp = possible_otp.match(/[a-z0-9]*\d[a-z0-9]*/);
-        console.log(otp);
-        return otp;
+class OTPCache {
+    constructor() {
+        this.cache = null;
     }
-    return "";
+
+    set(otp) {
+        this.cache["otp"] = otp;
+        this.cache["timestamp"] = Date.now();
+    }
+
+    get(sendResponse) {
+        if (this.cache && this.cache["otp"] && this.cache["timestamp"] > Date.now() - 60000) {
+            sendResponse(this.cache["otp"]);
+        }else{
+            this.cache = null;
+            retrieve_otp_from_gmail_dom(sendResponse);
+            return null;
+        }
+    }
 }
 
-function new_gmail_otp_check(sendResponse){
-    chrome.tabs.create({url: "https://mail.google.com/mail/u/0/#inbox", active: false}, function(tab){
-        chrome.scripting
-        .executeScript({
-          target : {tabId : tab.id, allFrames : true},
-          func : retrieve_otp_from_gmail_dom,
-        })
-        .then(injectionResults => {
-            let res = "";
-            for (const {frameId, result} of injectionResults) {
-                console.log(`Frame ${frameId} result:`, result[0]);
-                res = result[0];
-                break;
-            }
-            chrome.tabs.remove(tab.id);
-            sendResponse({otp: res});
-        });
-    });
+otp_cache = new OTPCache();
 
+function retrieve_otp_from_gmail_dom(fr_sendResponse){
+
+    gmail_injectable_script = {
+        js: ["scripts/gmail_injectable.js"],
+        matches: ["*://mail.google.com/*"],
+        persistAcrossSessions: false,
+        id: "gmail_injectable"
+    }
+    const iframeHosts = [
+        "https://mail.google.com/*"
+      ];
+    const RULE = {
+        id: 1,
+        priority: 1,
+        condition: {
+            //initiatorDomains: [chrome.runtime.id],
+            //requestDomains: iframeHosts,
+            resourceTypes: ['sub_frame'],
+        },
+        action: {
+            type: 'modifyHeaders',
+            responseHeaders: [
+            {header: 'X-Frame-Options', operation: 'remove'},
+            {header: 'Frame-Options', operation: 'remove'},
+            // Uncomment the following line to suppress `frame-ancestors` error
+            // {header: 'Content-Security-Policy', operation: 'remove'},
+            ],
+        },
+    };
+    console.log("frame options header stripping rule added");
+    chrome.scripting.registerContentScripts([gmail_injectable_script], () => {
+        console.log("Gmail injectable script registered");
+            chrome.offscreen.createDocument({
+                url: 'scripts/gmail_iframe.html',
+                reasons: ['DOM_SCRAPING'],
+                justification: 'Find OTP in Gmail DOM',
+            });
+            console.log("Offscreen document created");
+        
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                if(request.otp_provide){
+                    console.log("OTP received from gmail_injectable: ", message.otp);
+        
+                    chrome.scripting.unregisterContentScript(gmail_injectable_script);
+                    chrome.webRequest.onHeadersReceived.removeListener(strip_frame_options);
+                    chrome.offscreen.closeDocument();
+                    fr_sendResponse(message.otp);
+                }
+            });
+            console.log("Message listener added");
+            });
 }
 
 //when we get an otp request from the content script, we check the gmail page for the otp
 //and return it in a message
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
-    if (request.otp == "otp"){
-        console.log("OTP request received");
-        otp = new_gmail_otp_check(sendResponse);
-    }
-    return true;
+    console.log("OTP request received");
+    if (request.otp_ask) {
+        console.log("otp ask request")
+        otp_cache.get(sendResponse);
+    } 
 });

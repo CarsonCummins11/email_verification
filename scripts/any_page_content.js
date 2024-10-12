@@ -24,21 +24,14 @@ function create_autofill_popup(input_to_populate, otp){
 }
 
 
-function get_gmail_otp(input_to_populate, retries_left){
+function get_gmail_otp(input_to_populate){
     //call service worker to message us with the OTP
-    response = chrome.runtime.sendMessage({otp: "otp"},(response) => {
+    chrome.runtime.sendMessage({otp_ask: "otp"},(response) => {
         console.log("OTP received: ", response.otp);
         if (response.otp){
             create_autofill_popup(input_to_populate, response.otp);
-        }else{
-            if (retries_left > 0){
-                console.log("Retrying OTP retrieval");
-                setTimeout(() => get_gmail_otp(input_to_populate, retries_left-1), 15000);
-            }else{
-                console.log("No OTP found");
-            }
         }
-});
+    });
 }
 
 function register_get_otp_autofill_on_click(el){
